@@ -1,0 +1,57 @@
+Name:                etherpacket
+Version:             0.1.0
+
+Homepage:            
+Bug-Reports:         
+
+Author:              Merijn Verstraaten
+Maintainer:          Merijn Verstraaten <merijn@inconsistent.nl>
+Copyright:           Copyright © 2019 The Netherlands eScience Center & ASTRON
+
+License:             Apache-2.0
+License-File:        LICENSE
+
+Category:            System
+Cabal-Version:       >= 1.10
+Build-Type:          Simple
+Tested-With:         GHC == 8.4
+
+Synopsis:            
+
+Description:
+
+Data-Files:             
+
+Extra-Source-Files:     
+
+Executable etherpacket
+  Default-Language:     Haskell2010
+  GHC-Options:          -O2 -Wall -fno-warn-unused-do-bind
+  GHC-Prof-Options:     -fprof-auto
+  Hs-Source-Dirs:       .
+  Main-Is:              EtherPacket.hs
+  Other-Modules:        EncodeBits
+                        Ethernet
+                        IP
+                        UDP
+
+  Build-Depends:        base
+               ,        attoparsec == 0.13.*
+               ,        binary == 0.8.*
+               ,        bitvec == 0.2.*
+               ,        bytestring == 0.10.*
+               ,        crc == 0.1.*
+               ,        containers == 0.6.*
+               ,        finite-typelits == 0.1.4.*
+               ,        pretty-show == 1.9.*
+               ,        split == 0.2.*
+               ,        text == 1.2.*
+               ,        vector == 0.12.*
+               ,        vector-sized == 1.2.*
+               ,        optparse-applicative == 0.14.*
+               --,        prettyprinter == 1.2.*
+               --,        prettyprinter-ansi-terminal == 1.1.*
+
+Source-Repository head
+  Type:     git
+  Location: git+ssh://github.com:NLeSC-AAA2/etherpacket
