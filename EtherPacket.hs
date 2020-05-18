@@ -89,7 +89,7 @@ etherParser = Ethernet <$> mac "source" <*> mac "dest"
     hexPair :: Atto.Parser Word8
     hexPair = do
         v <- Atto.hexadecimal :: Atto.Parser Natural
-        guard $ v < fromIntegral (maxBound :: Word8)
+        guard $ v <= fromIntegral (maxBound :: Word8)
         return $ fromIntegral v
 
 data PacketSpec
