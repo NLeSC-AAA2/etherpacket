@@ -4,4 +4,4 @@ command -v realpath >/dev/null 2>&1 || realpath() {
 }
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 PROJECTFILE="$(realpath "$SCRIPTPATH/cabal.project")"
-exec cabal -v0 --project-file="$PROJECTFILE" new-run "exe:EtherPacket" -- $@
+exec cabal -v0 --project-file="$PROJECTFILE" v2-run "exe:EtherPacket" -- "$@"

@@ -42,7 +42,7 @@ instance EncodeBits MACAddress
 macAddressParser :: Maybe Char -> String -> Parser MACAddress
 macAddressParser shortOption prefix =
   Optparse.option (attoParse macAddress) $ mconcat
-    [ Optparse.metavar "IP", foldMap Optparse.short shortOption
+    [ Optparse.metavar "MAC", foldMap Optparse.short shortOption
     , Optparse.long (prefix <> "-mac"), Optparse.help "MAC address to use."
     ]
   where
