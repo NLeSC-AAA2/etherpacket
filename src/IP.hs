@@ -3,19 +3,24 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
-module IP(IP(..), IPPacket, mkIP) where
+module IP(IP(..), IPAddress, IPPacket, ipAddressParser, mkIP) where
 
+import Control.Monad (guard)
+import qualified Data.Attoparsec.Text as Atto
 import Data.Bit (Bit(..))
-import Data.Bits (Bits, (.&.), (.|.), complement, rotate, shiftR)
+import Data.Bits (Bits, (.&.), (.|.), complement, rotate, shiftL, shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Set (Set)
 import qualified Data.Set as S
+import qualified Data.Text as T
 import Data.Vector.Storable (Vector)
 import qualified Data.Vector.Storable as VS
 import qualified Data.Vector.Unboxed.Sized as Sized
 import Data.Word (Word8, Word16, Word32)
 import Numeric.Natural (Natural)
+import Options.Applicative (Parser, ReadM)
+import qualified Options.Applicative as Optparse
 
 import EncodeBits
 
@@ -81,9 +86,43 @@ instance EncodeBits FragmentOffset
 instance EncodeBitField FragmentOffset where
     type BitSizeField FragmentOffset = 13
 
+data IPAddress = IPAddress Word32
+    deriving (Show)
+
+instance EncodeBits IPAddress where
+    encodeBits (IPAddress ip) = encodeBits ip
+
+ipAddressParser :: Maybe Char -> String -> Parser IPAddress
+ipAddressParser shortOption prefix =
+  Optparse.option (attoParse ipAddress) $ mconcat
+    [ Optparse.metavar "IP", foldMap Optparse.short shortOption
+    , Optparse.long (prefix <> "-ip"), Optparse.help "IP address to use."
+    ]
+  where
+    attoParse :: Atto.Parser a -> ReadM a
+    attoParse p = Optparse.eitherReader $
+        Atto.parseOnly (p <* Atto.endOfInput) . T.pack
+
+    ipAddress :: Atto.Parser IPAddress
+    ipAddress = IPAddress <$> do
+        octet1 <- octet Nothing <* Atto.char '.'
+        octet2 <- octet (Just octet1) <* Atto.char '.'
+        octet3 <- octet (Just octet2) <* Atto.char '.'
+        octet (Just octet3)
+      where
+        octet :: Maybe Word32 -> Atto.Parser Word32
+        octet mOctets = do
+            v <- Atto.decimal :: Atto.Parser Word32
+            guard $ v < fromIntegral (maxBound :: Word8)
+            return $ prevOctets .|. v
+          where
+            prevOctets = case mOctets of
+                Nothing -> 0
+                Just v -> shiftL v 8
+
 data IP = IP
-     { ipSourceIP :: Word32
-     , ipDestIP :: Word32
+     { ipSourceIP :: IPAddress
+     , ipDestIP :: IPAddress
      , ipPayload :: ByteString
      } deriving (Show)
 
@@ -99,8 +138,8 @@ data IPPacket = IPPacket
     , ipPacketTTL :: Word8
     , ipPacketProtocol :: Word8
     , ipPacketHeaderChecksum :: Word16
-    , ipPacketSourceIP :: Word32
-    , ipPacketDestIP :: Word32
+    , ipPacketSourceIP :: IPAddress
+    , ipPacketDestIP :: IPAddress
     , ipPacketOptions :: ByteString
     , ipPacketPayload :: ByteString
     } deriving (Show)

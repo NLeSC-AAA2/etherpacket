@@ -24,13 +24,12 @@ Data-Files:
 
 Extra-Source-Files:     
 
-Executable etherpacket
+Library
   Default-Language:     Haskell2010
   GHC-Options:          -O2 -Wall -fno-warn-unused-do-bind
-  GHC-Prof-Options:     -fprof-auto
-  Hs-Source-Dirs:       .
-  Main-Is:              EtherPacket.hs
-  Other-Modules:        EncodeBits
+  Hs-Source-Dirs:       src
+
+  Exposed-Modules:      EncodeBits
                         Ethernet
                         IP
                         UDP
@@ -38,17 +37,30 @@ Executable etherpacket
   Build-Depends:        base
                ,        attoparsec ^>= 0.13
                ,        binary ^>= 0.8
-               ,        bitvec ^>= 0.2
+               ,        bitvec ^>= 1.0
                ,        bytestring ^>= 0.10
                ,        crc ^>= 0.1
                ,        containers ^>= 0.6
                ,        finite-typelits ^>= 0.1.4
-               ,        pretty-show ^>= 1.10
+               ,        optparse-applicative ^>= 0.15
                ,        split ^>= 0.2
                ,        text ^>= 1.2
                ,        vector ^>= 0.12
                ,        vector-sized ^>= 1.4
+
+Executable etherpacket
+  Default-Language:     Haskell2010
+  GHC-Options:          -O -Wall -fno-warn-unused-do-bind
+  Hs-Source-Dirs:       .
+  Main-Is:              EtherPacket.hs
+
+  Build-Depends:        base
+               ,        etherpacket
+               ,        bytestring ^>= 0.10
                ,        optparse-applicative ^>= 0.15
+               ,        pretty-show ^>= 1.10
+               ,        text ^>= 1.2
+               ,        vector-sized ^>= 1.4
 
 Source-Repository head
   Type:     git

@@ -1,16 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 module Main where
 
-import Data.Bits ((.|.), shiftL)
-import Control.Monad (forM_, guard, void)
-import qualified Data.Attoparsec.Text as Atto
+import Control.Monad (forM_)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text as T
-import qualified Data.Vector.Unboxed.Sized as Sized
-import Data.Word (Word8, Word16, Word32)
-import Numeric.Natural (Natural)
 import Options.Applicative
 import System.IO (IOMode(WriteMode), hPutStrLn, withFile)
 import Text.Show.Pretty
@@ -19,9 +13,6 @@ import EncodeBits
 import Ethernet
 import IP
 import UDP
-
-attoParse :: Atto.Parser a -> ReadM a
-attoParse p = eitherReader $ Atto.parseOnly (p <* Atto.endOfInput) . T.pack
 
 payloadParser :: Parser (IO ByteString)
 payloadParser = BS.readFile <$> payloadFile <|> args
@@ -40,57 +31,16 @@ payloadParser = BS.readFile <$> payloadFile <|> args
         [ metavar "PAYLOAD" ]
 
 udpParser :: Parser (ByteString -> UDP)
-udpParser = UDP <$> port "source" <*> port "dest"
-  where
-    port :: String -> Parser Word16
-    port "" = empty
-    port name@(c:_) = option auto $ mconcat
-        [ metavar "PORT", short c, long name, help "Port to use." ]
+udpParser = UDP <$> udpPortParser (Just 's') "source"
+                <*> udpPortParser (Just 'd') "dest"
 
 ipParser :: Parser (ByteString -> IP)
-ipParser = IP <$> ip "source" <*> ip "dest"
-  where
-    ip :: String -> Parser Word32
-    ip "" = empty
-    ip name@(c:_) = option (attoParse ipAddress) $ mconcat
-        [ metavar "IP", short c, long name, help "IP address to use." ]
-
-    ipAddress :: Atto.Parser Word32
-    ipAddress = do
-        octet1 <- octet Nothing <* Atto.char '.'
-        octet2 <- octet (Just octet1) <* Atto.char '.'
-        octet3 <- octet (Just octet2) <* Atto.char '.'
-        octet (Just octet3)
-      where
-        octet :: Maybe Word32 -> Atto.Parser Word32
-        octet mOctets = do
-            v <- Atto.decimal :: Atto.Parser Word32
-            guard $ v < fromIntegral (maxBound :: Word8)
-            return $ prevOctets .|. v
-          where
-            prevOctets = case mOctets of
-                Nothing -> 0
-                Just v -> shiftL v 8
+ipParser = IP <$> ipAddressParser (Just 's') "source"
+              <*> ipAddressParser (Just 'd') "dest"
 
 etherParser :: Parser (ByteString -> Ethernet)
-etherParser = Ethernet <$> mac "source" <*> mac "dest"
-  where
-    mac :: String -> Parser MACAddress
-    mac "" = empty
-    mac name@(c:_) = option (attoParse macAddress) $ mconcat
-        [ metavar "MAC", short c, long name, help "MAC address to use." ]
-
-    macAddress :: Atto.Parser MACAddress
-    macAddress = MAC <$> Sized.replicateM (hexPair <* separator)
-
-    separator :: Atto.Parser ()
-    separator = void (Atto.char ':') <|> (Atto.atEnd >>= guard)
-
-    hexPair :: Atto.Parser Word8
-    hexPair = do
-        v <- Atto.hexadecimal :: Atto.Parser Natural
-        guard $ v <= fromIntegral (maxBound :: Word8)
-        return $ fromIntegral v
+etherParser = Ethernet <$> macAddressParser (Just 's') "source"
+                       <*> macAddressParser (Just 'd') "dest"
 
 data PacketSpec
     = Udp UDP

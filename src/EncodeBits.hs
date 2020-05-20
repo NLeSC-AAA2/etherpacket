@@ -33,9 +33,8 @@ import qualified Data.Vector.Generic.Mutable as V
     (new, unsafeModify, unsafeWrite)
 import qualified Data.Vector.Storable as VS
 import qualified Data.Vector.Storable.Mutable as VS (STVector)
-import qualified Data.Vector.Unboxed as VU (Vector, Unbox)
+import qualified Data.Vector.Unboxed as VU (Vector, Unbox, replicate)
 import qualified Data.Vector.Unboxed.Mutable as VU (STVector)
-import Data.Vector.Unboxed.Bit (padWith)
 import Data.Vector.Unboxed.Sized (Vector, fromSized)
 import qualified Data.Vector.Unboxed.Sized as Sized
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -107,7 +106,7 @@ toZeroPaddedVector (Bits bits) = VS.unsafeCast $ V.create $ do
         | otherwise = elemBitSize - bitsRemaining
 
     paddedVector :: VU.Vector Bit
-    paddedVector = padWith (Bit False) padLength bits
+    paddedVector = bits <> VU.replicate padLength (Bit False)
 
 toZeroPaddedByteString :: BitString -> ByteString
 toZeroPaddedByteString bits = BS.fromForeignPtr fptr 0 len
