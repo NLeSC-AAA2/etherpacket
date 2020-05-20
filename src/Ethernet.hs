@@ -5,7 +5,15 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Ethernet where
+module Ethernet
+    ( Ethernet(..)
+    , EthernetFrame
+    , EthernetPacket
+    , MACAddress
+    , macAddressParser
+    , mkEthernet
+    , mkEthernetFrame
+    ) where
 
 import Control.Applicative ((<|>))
 import Control.Monad (guard, void)
@@ -105,10 +113,10 @@ checkSum frame =
     byteString = toZeroPaddedByteString . encodeBits $ frame
     checkSumVal = crc32 $ digest byteString
 
-mkEthernet :: Ethernet -> Maybe EthernetPacket
-mkEthernet Ethernet{..}
+rawMkEthernet :: Bool -> Ethernet -> Maybe EthernetFrame
+rawMkEthernet pad Ethernet{..}
     | dataLength > 1500  = Nothing
-    | otherwise = Just . checkSum $ EtherFrame
+    | otherwise = Just EtherFrame
         { etherFrameDestMac = etherDestMac
         , etherFrameSourceMac = etherSourceMac
         , etherFrameEtherType = EtherType $ 0x0800
@@ -119,4 +127,13 @@ mkEthernet Ethernet{..}
       dataLength = BS.length etherPayload
 
       paddedEtherPayload :: ByteString
-      paddedEtherPayload = etherPayload <> BS.replicate (46 - dataLength) 0
+      paddedEtherPayload
+        | pad = etherPayload <> BS.replicate (46 - dataLength) 0
+        | otherwise = etherPayload
+
+
+mkEthernet :: Ethernet -> Maybe EthernetPacket
+mkEthernet ether = checkSum <$> rawMkEthernet True ether
+
+mkEthernetFrame :: Ethernet -> Maybe EthernetFrame
+mkEthernetFrame ether = rawMkEthernet False ether
