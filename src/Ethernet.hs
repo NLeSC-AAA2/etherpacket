@@ -75,8 +75,8 @@ instance EncodeBits CRC32 where
     encodeBits (CRC32 w) = encodeBits . BS.toStrict . runPut . putWord32le $ w
 
 data Ethernet = Ethernet
-    { etherDestMac :: MACAddress
-    , etherSourceMac :: MACAddress
+    { etherSourceMac :: MACAddress
+    , etherDestMac :: MACAddress
     , etherPayload :: ByteString
     } deriving (Show)
 
