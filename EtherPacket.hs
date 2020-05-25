@@ -30,11 +30,11 @@ payloadParser = BS.readFile <$> payloadFile <|> args
     arg = strArgument $ mconcat
         [ metavar "PAYLOAD" ]
 
-udpParser :: Parser (ByteString -> UDP)
+udpParser :: Parser (UDPPayload -> UDP)
 udpParser = UDP <$> udpPortParser (Just 's') "source"
                 <*> udpPortParser (Just 'd') "dest"
 
-ipParser :: Parser (ByteString -> IP)
+ipParser :: Parser (IPPayload -> IP)
 ipParser = IP <$> ipAddressParser (Just 's') "source"
               <*> ipAddressParser (Just 'd') "dest"
 
@@ -47,6 +47,12 @@ data PacketSpec
     | Ip IP
     | Ether Ethernet
     deriving (Show)
+
+mkUdpSpec :: (UDPPayload -> UDP) -> ByteString -> PacketSpec
+mkUdpSpec f bs = Udp . f $ UDPPayload bs
+
+mkIpSpec :: (IPPayload -> IP) -> ByteString -> PacketSpec
+mkIpSpec f bs = Ip . f $ IPPayload bs
 
 data Command = Command
     { toPacketSpec :: ByteString -> PacketSpec
@@ -83,9 +89,9 @@ commandParser =
         [ subCommand "ether" "generate an EtherNet packet"
             "Generate an EtherNet packet" $ (Ether .) <$> etherParser
         , subCommand "ip" "generate an IP packet"
-            "Generate an IP packet" $ (Ip .) <$> ipParser
+            "Generate an IP packet" $ mkIpSpec <$> ipParser
         , subCommand "udp" "generate an UDP packet"
-            "Generate an UDP packet" $ (Udp .) <$> udpParser
+            "Generate an UDP packet" $ mkUdpSpec <$> udpParser
         ]
 
 commandlineParser :: ParserInfo Command

@@ -1,5 +1,13 @@
 {-# LANGUAGE RecordWildCards #-}
-module UDP (UDP(..), UDPPacket, UDPPort, mkUDP, udpPortParser) where
+module UDP
+    ( UDP(..)
+    , UDPPacket
+    , UDPPayload(..)
+    , UDPPort
+    , mkUDP
+    , udpPacketLength
+    , udpPortParser
+    ) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -23,10 +31,12 @@ udpPortParser shortOption prefix =
         , Optparse.help "Port to us."
         ]
 
+data UDPPayload = UDPLength Word16 | UDPPayload ByteString deriving Show
+
 data UDP = UDP
     { udpSourcePort :: UDPPort
     , udpDestPort :: UDPPort
-    , udpPayload :: ByteString
+    , udpPayload :: UDPPayload
     } deriving (Show)
 
 data UDPPacket = UDPPacket
@@ -54,11 +64,14 @@ mkUDP UDP{..}
         , udpPacketDestPort = udpDestPort
         , udpPacketLength = fromIntegral $ 8 + dataLength
         , udpPacketChecksum = 0
-        , udpPacketPayload = udpPayload
+        , udpPacketPayload = payloadData
         }
     where
       maxLength :: Word16
       maxLength = maxBound - 8
 
       dataLength :: Int
-      dataLength = BS.length udpPayload
+      payloadData :: ByteString
+      (dataLength, payloadData) = case udpPayload of
+          UDPLength n -> (fromIntegral n, mempty)
+          UDPPayload bs -> (BS.length bs, bs)

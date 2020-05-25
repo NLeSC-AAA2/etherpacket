@@ -2,6 +2,7 @@
 module Main where
 
 import Data.ByteString (ByteString)
+import Data.Word (Word16)
 import Options.Applicative
 
 import EncodeBits
@@ -12,18 +13,18 @@ import UDP
 import OutputHeader (outputHeader)
 
 data Command = Command
-    { udpSpec :: UDP
-    , toIpSpec :: ByteString -> IP
+    { udpSpec :: UDPPayload -> UDP
+    , toIpSpec :: IPPayload -> IP
     , toEtherSpec :: ByteString -> Ethernet
+    , packetLength :: Word16
     , outputPath :: FilePath
     }
 
-udpParser :: Parser UDP
+udpParser :: Parser (UDPPayload -> UDP)
 udpParser = UDP <$> udpPortParser Nothing "source"
                 <*> udpPortParser Nothing "dest"
-                <*> pure mempty
 
-ipParser :: Parser (ByteString -> IP)
+ipParser :: Parser (IPPayload -> IP)
 ipParser = IP <$> ipAddressParser Nothing "source"
               <*> ipAddressParser Nothing "dest"
 
@@ -32,7 +33,8 @@ etherParser = Ethernet <$> macAddressParser Nothing "source"
                        <*> macAddressParser Nothing "dest"
 
 commandParser :: Parser Command
-commandParser = Command <$> udpParser <*> ipParser <*> etherParser <*> output
+commandParser = Command <$> udpParser <*> ipParser <*> etherParser
+                        <*> udpLengthParser <*> output
   where
     output :: Parser FilePath
     output = outputFilePath <|> pure "/dev/stdout"
@@ -40,6 +42,12 @@ commandParser = Command <$> udpParser <*> ipParser <*> etherParser <*> output
         outputFilePath = strOption $ mconcat
             [ metavar "PATH", short 'o', long "output"
             , help "Output file to use.", showDefault ]
+
+    udpLengthParser :: Parser Word16
+    udpLengthParser = option auto $ mconcat
+        [ metavar "N", short 'l', long "length"
+        , help "Payload length in bytes."
+        ]
 
 commandlineParser :: ParserInfo Command
 commandlineParser = info (commandParser <**> helper) $ mconcat
@@ -59,11 +67,12 @@ main :: IO ()
 main = do
     Command{..} <- execParser commandlineParser
 
-    let packet = do
-            udpData <- tagFailure "UDP" $ encode <$> mkUDP udpSpec
-            ipData <- tagFailure "IP" $ encode <$> mkIP (toIpSpec udpData)
+    let udpConfig = udpSpec $ UDPLength packetLength
+        packet = do
+            udpPacket <- tagFailure "UDP" $ mkUDP udpConfig
+            ipPacket <- tagFailure "IP" $ mkIP (toIpSpec $ UDP2IP udpPacket)
             tagFailure "Ethernet" $
-                encode <$> mkEthernetFrame (toEtherSpec ipData)
+                encode <$> mkEthernetFrame (toEtherSpec (encode ipPacket))
 
     case packet of
         Left err -> putStrLn err
