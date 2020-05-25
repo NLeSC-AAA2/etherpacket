@@ -62,6 +62,22 @@ Executable etherpacket
                ,        text ^>= 1.2
                ,        vector-sized ^>= 1.4
 
+Executable gen-opencl-packet
+  Default-Language:     Haskell2010
+  GHC-Options:          -O -Wall -fno-warn-unused-do-bind
+  Hs-Source-Dirs:       .
+  Main-Is:              OpenCL.hs
+  Other-Modules:        OutputHeader
+
+  Build-Depends:        base
+               ,        etherpacket
+               ,        bytestring ^>= 0.10
+               ,        filepath ^>= 1.4.2.1
+               ,        interpolate ^>= 0.2.0
+               ,        optparse-applicative ^>= 0.15
+               ,        text ^>= 1.2
+               ,        vector-sized ^>= 1.4
+
 Source-Repository head
   Type:     git
   Location: git+ssh://github.com:NLeSC-AAA2/etherpacket
