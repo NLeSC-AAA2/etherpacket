@@ -16,7 +16,8 @@ data Command = Command
     { udpSpec :: UDPPayload -> UDP
     , toIpSpec :: IPPayload -> IP
     , toEtherSpec :: ByteString -> Ethernet
-    , packetLength :: Word16
+    , payloadType :: String
+    , payloadLength :: Word16
     , outputPath :: FilePath
     }
 
@@ -34,7 +35,7 @@ etherParser = Ethernet <$> macAddressParser Nothing "source"
 
 commandParser :: Parser Command
 commandParser = Command <$> udpParser <*> ipParser <*> etherParser
-                        <*> udpLengthParser <*> output
+                        <*> payloadType <*> payloadLength <*> output
   where
     output :: Parser FilePath
     output = outputFilePath <|> pure "/dev/stdout"
@@ -43,17 +44,22 @@ commandParser = Command <$> udpParser <*> ipParser <*> etherParser
             [ metavar "PATH", short 'o', long "output"
             , help "Output file to use.", showDefault ]
 
-    udpLengthParser :: Parser Word16
-    udpLengthParser = option auto $ mconcat
+    payloadLength :: Parser Word16
+    payloadLength = option auto $ mconcat
         [ metavar "N", short 'l', long "length"
-        , help "Payload length in bytes."
+        , help "Payload length."
+        ]
+
+    payloadType :: Parser String
+    payloadType = strOption $ mconcat
+        [ metavar "TYPE", short 't', long "type"
+        , help "Payload type.", value "uchar"
         ]
 
 commandlineParser :: ParserInfo Command
 commandlineParser = info (commandParser <**> helper) $ mconcat
     [ fullDesc
-    , header $ " EtherPacket - a tool for generating packets"
-    , progDesc "Generate EtherNet, IP, and UDP packets."
+    , progDesc "Generate OpenCL packets."
     ]
 
 encode :: EncodeBits a => a -> ByteString
@@ -67,7 +73,7 @@ main :: IO ()
 main = do
     Command{..} <- execParser commandlineParser
 
-    let udpConfig = udpSpec $ UDPLength packetLength
+    let udpConfig = udpSpec $ UDPLength payloadLength
         packet = do
             udpPacket <- tagFailure "UDP" $ mkUDP udpConfig
             ipPacket <- tagFailure "IP" $ mkIP (toIpSpec $ UDP2IP udpPacket)
@@ -76,4 +82,4 @@ main = do
 
     case packet of
         Left err -> putStrLn err
-        Right p -> outputHeader outputPath p
+        Right p -> outputHeader payloadType payloadLength outputPath p
