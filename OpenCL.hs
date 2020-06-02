@@ -16,7 +16,7 @@ data Command = Command
     { udpSpec :: UDPPayload -> UDP
     , toIpSpec :: IPPayload -> IP
     , toEtherSpec :: ByteString -> Ethernet
-    , payloadType :: String
+    , payloadType :: (String, Word16)
     , payloadLength :: Word16
     , outputPath :: FilePath
     }
@@ -35,7 +35,8 @@ etherParser = Ethernet <$> macAddressParser Nothing "source"
 
 commandParser :: Parser Command
 commandParser = Command <$> udpParser <*> ipParser <*> etherParser
-                        <*> payloadType <*> payloadLength <*> output
+                        <*> (payloadType <|> pure ("uchar", 1))
+                        <*> payloadLength <*> output
   where
     output :: Parser FilePath
     output = outputFilePath <|> pure "/dev/stdout"
@@ -50,10 +51,19 @@ commandParser = Command <$> udpParser <*> ipParser <*> etherParser
         , help "Payload length."
         ]
 
-    payloadType :: Parser String
-    payloadType = strOption $ mconcat
+    payloadType :: Parser (String, Word16)
+    payloadType = (,) <$> openclType <*> openclSize
+
+    openclType :: Parser String
+    openclType = strOption $ mconcat
         [ metavar "TYPE", short 't', long "type"
         , help "Payload type.", value "uchar"
+        ]
+
+    openclSize :: Parser Word16
+    openclSize = option auto $ mconcat
+        [ metavar "SIZE", short 's', long "size"
+        , help "Size of payload type in bytes."
         ]
 
 commandlineParser :: ParserInfo Command
@@ -73,7 +83,7 @@ main :: IO ()
 main = do
     Command{..} <- execParser commandlineParser
 
-    let udpConfig = udpSpec $ UDPLength payloadLength
+    let udpConfig = udpSpec $ UDPLength (payloadLength * snd payloadType)
         packet = do
             udpPacket <- tagFailure "UDP" $ mkUDP udpConfig
             ipPacket <- tagFailure "IP" $ mkIP (toIpSpec $ UDP2IP udpPacket)
@@ -82,4 +92,4 @@ main = do
 
     case packet of
         Left err -> putStrLn err
-        Right p -> outputHeader payloadType payloadLength outputPath p
+        Right p -> outputHeader (fst payloadType) payloadLength outputPath p
