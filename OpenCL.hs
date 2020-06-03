@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 module Main where
 
@@ -22,16 +23,16 @@ data Command = Command
     }
 
 udpParser :: Parser (UDPPayload -> UDP)
-udpParser = UDP <$> udpPortParser Nothing "source"
-                <*> udpPortParser Nothing "dest"
+udpParser = UDP <$> udpPortParser Nothing "source" (Just 53118)
+                <*> udpPortParser Nothing "dest" (Just 4440)
 
 ipParser :: Parser (IPPayload -> IP)
-ipParser = IP <$> ipAddressParser Nothing "source"
-              <*> ipAddressParser Nothing "dest"
+ipParser = IP <$> ipAddressParser Nothing "source" (Just "10.196.248.254")
+              <*> ipAddressParser Nothing "dest" (Just "10.196.248.2")
 
 etherParser :: Parser (ByteString -> Ethernet)
-etherParser = Ethernet <$> macAddressParser Nothing "source"
-                       <*> macAddressParser Nothing "dest"
+etherParser = Ethernet <$> macAddressParser Nothing "source" (Just "F4:52:14:94:DC:C1")
+                       <*> macAddressParser Nothing "dest" (Just "00:0743:3B:F6:40")
 
 commandParser :: Parser Command
 commandParser = Command <$> udpParser <*> ipParser <*> etherParser

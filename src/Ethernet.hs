@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -23,6 +24,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Lazy as BS (toStrict)
 import Data.Digest.CRC32 (crc32, digest)
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector.Unboxed.Sized (Vector)
 import qualified Data.Vector.Unboxed.Sized as Sized
@@ -39,11 +41,16 @@ newtype MACAddress = MAC (Vector 6 Word8)
 
 instance EncodeBits MACAddress
 
-macAddressParser :: Maybe Char -> String -> Parser MACAddress
-macAddressParser shortOption prefix =
+macAddressParser :: Maybe Char -> String -> Maybe Text -> Parser MACAddress
+macAddressParser shortOption prefix val =
   Optparse.option (attoParse macAddress) $ mconcat
     [ Optparse.metavar "MAC", foldMap Optparse.short shortOption
     , Optparse.long (prefix <> "-mac"), Optparse.help "MAC address to use."
+    , case val of
+        Nothing -> mempty
+        Just txt -> case Atto.parseOnly (macAddress <* Atto.endOfInput) txt of
+            Right mac -> Optparse.value mac <> Optparse.showDefaultWith (const (T.unpack txt))
+            Left _ -> mempty
     ]
   where
     attoParse :: Atto.Parser a -> ReadM a

@@ -31,16 +31,16 @@ payloadParser = BS.readFile <$> payloadFile <|> args
         [ metavar "PAYLOAD" ]
 
 udpParser :: Parser (UDPPayload -> UDP)
-udpParser = UDP <$> udpPortParser (Just 's') "source"
-                <*> udpPortParser (Just 'd') "dest"
+udpParser = UDP <$> udpPortParser (Just 's') "source" Nothing
+                <*> udpPortParser (Just 'd') "dest" Nothing
 
 ipParser :: Parser (IPPayload -> IP)
-ipParser = IP <$> ipAddressParser (Just 's') "source"
-              <*> ipAddressParser (Just 'd') "dest"
+ipParser = IP <$> ipAddressParser (Just 's') "source" Nothing
+              <*> ipAddressParser (Just 'd') "dest" Nothing
 
 etherParser :: Parser (ByteString -> Ethernet)
-etherParser = Ethernet <$> macAddressParser (Just 's') "source"
-                       <*> macAddressParser (Just 'd') "dest"
+etherParser = Ethernet <$> macAddressParser (Just 's') "source" Nothing
+                       <*> macAddressParser (Just 'd') "dest" Nothing
 
 data PacketSpec
     = Udp UDP

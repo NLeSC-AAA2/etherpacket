@@ -20,6 +20,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector.Storable (Vector)
 import qualified Data.Vector.Storable as VS
@@ -100,11 +101,16 @@ data IPAddress = IPAddress Word32
 instance EncodeBits IPAddress where
     encodeBits (IPAddress ip) = encodeBits ip
 
-ipAddressParser :: Maybe Char -> String -> Parser IPAddress
-ipAddressParser shortOption prefix =
+ipAddressParser :: Maybe Char -> String -> Maybe Text -> Parser IPAddress
+ipAddressParser shortOption prefix val =
   Optparse.option (attoParse ipAddress) $ mconcat
     [ Optparse.metavar "IP", foldMap Optparse.short shortOption
     , Optparse.long (prefix <> "-ip"), Optparse.help "IP address to use."
+    , case val of
+        Nothing -> mempty
+        Just txt -> case Atto.parseOnly (ipAddress <* Atto.endOfInput) txt of
+            Left _ -> mempty
+            Right ip -> Optparse.value ip <> Optparse.showDefaultWith (const (T.unpack txt))
     ]
   where
     attoParse :: Atto.Parser a -> ReadM a

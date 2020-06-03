@@ -23,12 +23,15 @@ newtype UDPPort = UDPPort Word16
 instance EncodeBits UDPPort where
     encodeBits (UDPPort p) = encodeBits p
 
-udpPortParser :: Maybe Char -> String -> Parser UDPPort
-udpPortParser shortOption prefix =
+udpPortParser :: Maybe Char -> String -> Maybe Word16 -> Parser UDPPort
+udpPortParser shortOption prefix val =
   Optparse.option (UDPPort <$> Optparse.auto) $ mconcat
         [ Optparse.metavar "PORT", foldMap Optparse.short shortOption
         , Optparse.long (prefix <> "-port")
         , Optparse.help "Port to us."
+        , case val of
+            Just n -> Optparse.value (UDPPort n) <> Optparse.showDefaultWith (const (show n))
+            Nothing -> mempty
         ]
 
 data UDPPayload = UDPLength Word16 | UDPPayload ByteString deriving Show
