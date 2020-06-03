@@ -32,7 +32,7 @@ ipParser = IP <$> ipAddressParser Nothing "source" (Just "10.196.248.254")
 
 etherParser :: Parser (ByteString -> Ethernet)
 etherParser = Ethernet <$> macAddressParser Nothing "source" (Just "F4:52:14:94:DC:C1")
-                       <*> macAddressParser Nothing "dest" (Just "00:0743:3B:F6:40")
+                       <*> macAddressParser Nothing "dest" (Just "00:07:43:3B:F6:40")
 
 commandParser :: Parser Command
 commandParser = Command <$> udpParser <*> ipParser <*> etherParser
