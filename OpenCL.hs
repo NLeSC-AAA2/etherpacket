@@ -59,6 +59,7 @@ commandParser = Command <$> udpParser <*> ipParser <*> etherParser
     openclType = strOption $ mconcat
         [ metavar "TYPE", short 't', long "type"
         , help "Payload type.", value "uchar"
+        , showDefaultWith id
         ]
 
     openclSize :: Parser Word16
