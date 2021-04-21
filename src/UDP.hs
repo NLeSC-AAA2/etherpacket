@@ -20,7 +20,7 @@ udpPortParser shortOption prefix =
   Optparse.option (UDPPort <$> Optparse.auto) $ mconcat
         [ Optparse.metavar "PORT", foldMap Optparse.short shortOption
         , Optparse.long (prefix <> "-port")
-        , Optparse.help "Port to us."
+        , Optparse.help "Port to use."
         ]
 
 data UDP = UDP
