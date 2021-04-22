@@ -3,7 +3,14 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
-module IP(IP(..), IPAddress, IPPacket, ipAddressParser, mkIP) where
+module IP
+    ( IP(..)
+    , IPAddress
+    , IPPacket
+    , IPPayload(..)
+    , ipAddressParser
+    , mkIP
+    ) where
 
 import Control.Monad (guard)
 import qualified Data.Attoparsec.Text as Atto
@@ -13,6 +20,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Set (Set)
 import qualified Data.Set as S
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector.Storable (Vector)
 import qualified Data.Vector.Storable as VS
@@ -23,6 +31,7 @@ import Options.Applicative (Parser, ReadM)
 import qualified Options.Applicative as Optparse
 
 import EncodeBits
+import UDP
 
 newtype Version = Version Word8
     deriving (Eq, Bits, Show)
@@ -92,11 +101,16 @@ data IPAddress = IPAddress Word32
 instance EncodeBits IPAddress where
     encodeBits (IPAddress ip) = encodeBits ip
 
-ipAddressParser :: Maybe Char -> String -> Parser IPAddress
-ipAddressParser shortOption prefix =
+ipAddressParser :: Maybe Char -> String -> Maybe Text -> Parser IPAddress
+ipAddressParser shortOption prefix val =
   Optparse.option (attoParse ipAddress) $ mconcat
     [ Optparse.metavar "IP", foldMap Optparse.short shortOption
     , Optparse.long (prefix <> "-ip"), Optparse.help "IP address to use."
+    , case val of
+        Nothing -> mempty
+        Just txt -> case Atto.parseOnly (ipAddress <* Atto.endOfInput) txt of
+            Left _ -> mempty
+            Right ip -> Optparse.value ip <> Optparse.showDefaultWith (const (T.unpack txt))
     ]
   where
     attoParse :: Atto.Parser a -> ReadM a
@@ -120,10 +134,12 @@ ipAddressParser shortOption prefix =
                 Nothing -> 0
                 Just v -> shiftL v 8
 
+data IPPayload = UDP2IP UDPPacket | IPPayload ByteString deriving Show
+
 data IP = IP
      { ipSourceIP :: IPAddress
      , ipDestIP :: IPAddress
-     , ipPayload :: ByteString
+     , ipPayload :: IPPayload
      } deriving (Show)
 
 data IPPacket = IPPacket
@@ -211,7 +227,7 @@ mkIP IP{..}
         , ipPacketSourceIP = ipSourceIP
         , ipPacketDestIP = ipDestIP
         , ipPacketOptions = BS.empty
-        , ipPacketPayload = ipPayload
+        , ipPacketPayload = payloadData
         }
   where
     headerLength, optionLength :: Integral a => a
@@ -222,4 +238,9 @@ mkIP IP{..}
     maxLength = maxBound - (4 * headerLength)
 
     dataLength :: Int
-    dataLength = BS.length ipPayload
+    payloadData :: ByteString
+    (dataLength, payloadData) = case ipPayload of
+        UDP2IP udpPacket -> ( fromIntegral (udpPacketLength udpPacket)
+                            , toZeroPaddedByteString (encodeBits udpPacket)
+                            )
+        IPPayload bs -> (BS.length bs, bs)

@@ -1,5 +1,13 @@
 {-# LANGUAGE RecordWildCards #-}
-module UDP (UDP(..), UDPPacket, UDPPort, mkUDP, udpPortParser) where
+module UDP
+    ( UDP(..)
+    , UDPPacket
+    , UDPPayload(..)
+    , UDPPort
+    , mkUDP
+    , udpPacketLength
+    , udpPortParser
+    ) where
 
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -15,18 +23,23 @@ newtype UDPPort = UDPPort Word16
 instance EncodeBits UDPPort where
     encodeBits (UDPPort p) = encodeBits p
 
-udpPortParser :: Maybe Char -> String -> Parser UDPPort
-udpPortParser shortOption prefix =
+udpPortParser :: Maybe Char -> String -> Maybe Word16 -> Parser UDPPort
+udpPortParser shortOption prefix val =
   Optparse.option (UDPPort <$> Optparse.auto) $ mconcat
         [ Optparse.metavar "PORT", foldMap Optparse.short shortOption
         , Optparse.long (prefix <> "-port")
         , Optparse.help "Port to use."
+        , case val of
+            Just n -> Optparse.value (UDPPort n) <> Optparse.showDefaultWith (const (show n))
+            Nothing -> mempty
         ]
+
+data UDPPayload = UDPLength Word16 | UDPPayload ByteString deriving Show
 
 data UDP = UDP
     { udpSourcePort :: UDPPort
     , udpDestPort :: UDPPort
-    , udpPayload :: ByteString
+    , udpPayload :: UDPPayload
     } deriving (Show)
 
 data UDPPacket = UDPPacket
@@ -54,11 +67,14 @@ mkUDP UDP{..}
         , udpPacketDestPort = udpDestPort
         , udpPacketLength = fromIntegral $ 8 + dataLength
         , udpPacketChecksum = 0
-        , udpPacketPayload = udpPayload
+        , udpPacketPayload = payloadData
         }
     where
       maxLength :: Word16
       maxLength = maxBound - 8
 
       dataLength :: Int
-      dataLength = BS.length udpPayload
+      payloadData :: ByteString
+      (dataLength, payloadData) = case udpPayload of
+          UDPLength n -> (fromIntegral n, mempty)
+          UDPPayload bs -> (BS.length bs, bs)
