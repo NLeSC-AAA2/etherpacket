@@ -51,6 +51,7 @@ Library
 Executable etherpacket
   Default-Language:     Haskell2010
   GHC-Options:          -O -Wall -fno-warn-unused-do-bind
+  GHC-Prof-Options:     -rtsopts
   Hs-Source-Dirs:       .
   Main-Is:              EtherPacket.hs
 

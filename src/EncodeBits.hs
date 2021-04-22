@@ -174,7 +174,7 @@ instance EncodeBits ByteString where
         (bsPtr, bsOff, bsLen) = BS.toForeignPtr inputBS
 
         toggleBit :: VU.STVector s Bit -> Int -> Word8 -> ST s ()
-        toggleBit vec idx w = forM_ [0..finiteBitSize w] $ \bit ->
+        toggleBit vec idx w = forM_ [0 .. (finiteBitSize w - 1)] $ \bit ->
             V.unsafeWrite vec (offset + bit) (Bit (w `testBit` (7 - bit)))
           where
             offset = 8 * idx
